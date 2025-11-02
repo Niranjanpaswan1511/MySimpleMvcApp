@@ -1,85 +1,42 @@
-﻿name: Build and Deploy to httpdocs via FTP
+﻿name: Deploy ASP.NET Core MVC to FTP (No Downtime)
 
 on:
   push:
     branches:
-      - main
+      - main   # 🔹 change if you deploy from another branch
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: windows-latest
 
     steps:
-      # Step 1: Checkout your repo
-      - name: Checkout repository
+      # 🟩 Step 1: Get latest code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Setup .NET SDK
+      # 🟦 Step 2: Setup .NET 8 SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'  # अपने project का version डालें (e.g., 7.0.x)
+          dotnet-version: '8.0.x'
 
-      # Step 3: Restore dependencies
-      - name: Restore dependencies
-        run: dotnet restore
-
-      # Step 4: Build in Release mode
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      # Step 5: Publish to /publish folder
-      - name: Publish
+      # 🟨 Step 3: Publish app for release
+      - name: Publish ASP.NET Core App
         run: dotnet publish -c Release -o ./publish
 
-      # Step 6: Add temporary app_offline.htm to stop IIS app
-      - name: Create app_offline.htm (stop running app)
-        run: echo "<html><body><h2>Deployment in progress... please wait.</h2></body></html>" > ./publish/app_offline.htm
-
-      # Step 7: Upload app_offline.htm first (this stops your running site)
-      - name: Upload app_offline.htm first
+      # 🟧 Step 4: Deploy to FTP (No Downtime)
+      - name: FTP Deploy (No Downtime)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: publish/
-          server-dir: /httpdocs/
-          exclude: |
-            **/*
-          include: |
-            app_offline.htm
-
-      # Step 8: Wait 10 seconds for IIS to stop app completely
-      - name: Wait before full deploy
-        run: Start-Sleep -Seconds 10
-
-      # Step 9: Deploy all files (overwrite everything cleanly)
-      - name: Deploy full site to httpdocs
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: publish/
-          server-dir: /httpdocs/
-          exclude: |
+          local-dir: ./publish/              # local publish folder
+          server-dir: /httpdocs/             # 🔹 change to your hosting root
+          dangerous-clean-slate: false       # ❌ Don’t delete existing files
+          retries: 5                         # 🔁 try 5 times if a file is locked
+          retry-delay: 10s                   # ⏱️ 10s gap between retries
+          exclude: |                         # optional excludes
             **/*.pdb
             **/*.xml
-          dangerous-clean-slate: false  # true भी कर सकते हैं अगर पुरानी files हटानी हों
-
-      # Step 10: Remove app_offline.htm (restart IIS app)
-      - name: Remove app_offline.htm (bring site back online)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: publish/
-          server-dir: /httpdocs/
-          exclude: |
-            **/*
-          include: |
-            app_offline.htm
-          dry-run: false
-          command: delete
+            **/*.config
