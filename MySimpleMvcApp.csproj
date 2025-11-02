@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include=".github\workflows\deploy-via-ftp.yml" />
+  </ItemGroup>
+
 </Project>

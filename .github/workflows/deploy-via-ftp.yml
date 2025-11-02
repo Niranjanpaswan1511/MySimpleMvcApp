@@ -1,0 +1,43 @@
+﻿name: Build and Deploy (FTP)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'   # अपने project का .NET version डालो, example: '7.0.x' agar 7 use kar rahe ho
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+
+      - name: List publish files (for debug)
+        run: dir ./publish
+
+      - name: Deploy to FTP (upload publish folder)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: publish
+          server-dir: /public_html/    # <-- अपना webroot path यहाँ डालो. अक्सर होस्टिंग में /public_html/ या /wwwroot/ होता है.
+          exclude: |
+            **/*.pdb
+            **/*.xml
