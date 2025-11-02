@@ -1,4 +1,4 @@
-﻿name: Build and Deploy (FTP)
+﻿name: Build and Deploy (FTP to httpdocs)
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'   # अपने project का .NET version डालो, example: '7.0.x' agar 7 use kar rahe ho
+          dotnet-version: '8.0.x'   # या आपके project का version, जैसे '7.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -27,7 +27,7 @@ jobs:
       - name: Publish
         run: dotnet publish -c Release -o ./publish
 
-      - name: List publish files (for debug)
+      - name: Check publish folder (debug)
         run: dir ./publish
 
       - name: Deploy to FTP (upload publish folder)
@@ -36,8 +36,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: publish
-          server-dir: /public_html/    # <-- अपना webroot path यहाँ डालो. अक्सर होस्टिंग में /public_html/ या /wwwroot/ होता है.
+          local-dir: publish/            # ← ध्यान दें, '/' अंत में ज़रूर हो
+          server-dir: /httpdocs/         # ← आपका web root folder
           exclude: |
             **/*.pdb
             **/*.xml
